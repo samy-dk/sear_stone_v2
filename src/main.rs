@@ -89,7 +89,9 @@ fn main() {
         process::exit(1);
     }
 
-    
+    //
+    let i = add(20, 30);
+    //
     let save_file = "data/word_list.txt";
 
     if !Path::new(save_file).exists() {
@@ -152,20 +154,8 @@ fn main() {
     for word in file_words {
         writeln!(file_writer, "{}", word).expect("Failed to write to file");
     }
-
-
-    
-
-
-
-
-
-    // todo
-    // I got all the words, and they are in words
-    // Now, I need to:
-    // 1) load words already in file 
-    // 2) add and 
-    // 3) sort the combined list of words
-    // 4) Write to file
 }
 
+fn add( x: i32, y:i32) -> i32 {
+    x + y
+}
