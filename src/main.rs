@@ -42,10 +42,6 @@ mod processes {
             eprintln!("No file given");
             process::exit(1);
         }
-        if arg_count > 2 {
-            eprintln!("To many local_args!");
-            process::exit(1);
-        }
 
 
         // make sure the word_list.txt file is there
@@ -59,21 +55,29 @@ mod processes {
 
 
         // read the file from the args
-        let arg_file = fs::read_to_string(&local_args[1])
-            .expect("Could not read file");
 
 
         // Process chars, one-by-one
         let mut p = JapaneseWordParser::new();
         let mut words: Vec<String> = Vec::new();
 
-        for ch in arg_file.chars() {
-            match p.add_to_word(ch) {
-                None => (),
-                Some(s) => {
-                    words.push(s);
-                    p.word.clear();
+        let mut c = false;
+        for a in local_args {
+            if c == false {
+                c = true;
+            } else {
+                let arg_file = fs::read_to_string(&a)
+                    .expect("Could not read file");
+                for ch in arg_file.chars() {
+                    match p.add_to_word(ch) {
+                        None => (),
+                        Some(s) => {
+                            words.push(s);
+                            p.word.clear();
+                        }
+                    }
                 }
+
             }
         }
         words.sort();
