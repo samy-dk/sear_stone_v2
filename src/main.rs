@@ -27,18 +27,26 @@ fn main() {
     if arg_count == 1 {
         eprintln!("Not enough args. Try ss -h or --help for help");
         process::exit(1);
-    } else {
-        for a in local_args {
-            match a.as_str().trim() {
-                "-h" => {
-                    data.flags = Some(ss_data::Flags::Help);
-                }
-                _ => println!("Arg: {}", a),
-            }
+    } 
+    for a in local_args {
+        match a.as_str().trim() {
+            "-h" => data.flags = Some(ss_data::Flags::Help),
+            "--help" => data.flags = Some(ss_data::Flags::Help),
+            "-pa" => data.flags = Some(ss_data::Flags::PrintAll),
+            "--print-all" => data.flags = Some(ss_data::Flags::PrintAll),
+            "-pr" => data.flags = Some(ss_data::Flags::PrintRandom),
+            "--print-random" => data.flags = Some(ss_data::Flags::PrintRandom),
+            _ => println!("Arg: {}", a),
         }
     }
 
-    processes::process_files();
+    match data.flags {
+        Some(ss_data::Flags::Help) => processes::print_help(),
+        Some(ss_data::Flags::PrintAll) => processes::print_all(),
+        Some(ss_data::Flags::PrintRandom) => processes::print_random(),
+        None => processes::process_files(),
+    }
+
 }
 
 
@@ -48,7 +56,6 @@ mod ss_data {
         PrintAll,
         PrintRandom,
     }
-
 
     pub struct SSData {
         pub flags: Option<Flags>,
@@ -177,6 +184,50 @@ mod processes {
         for word in file_words {
             writeln!(file_writer, "{}", word).expect("Failed to write to file");
         }
+    }
+
+    pub fn print_help() {
+        println!("Welcome to sear_stone! This program pulls Japanese words out");
+        println!("of files to aid in study.");
+        println!("");
+        println!("Here is how to use it:");
+        println!("1) If no flags are passed, all args are assumed to be text ");
+        println!("files that contains Japanese words and will be proccessed.");
+        println!("These words will be added to a file called words_list.txt");
+        println!("");
+        println!("2) -h or --help will print this menu.");
+        println!("");
+        println!("3) -pa or --print-all will print all the words currently in ");
+        println!("words_list.txt");
+        println!("");
+        println!("4) -pr or --print-random will print 10 random words from ");
+        println!("words_list.txt");
+        println!("");
+    }
+
+    pub fn print_all() {
+        let save_file = "data/word_list.txt";
+
+        if !Path::new(save_file).exists() {
+            let _dir = fs::create_dir("data");
+            let _file = File::create(save_file)
+                .expect("Could not create file");
+        }
+
+        let file = File::open(&save_file).expect("Could not open file");
+        let reader = BufReader::new(file);
+
+        for l in reader.lines() {
+            println!("{:?}", l);
+            match l {
+                Ok(w) => println!("{}", w),
+                Err(e) => println!("Error: {}", e),
+            }
+        }
+    }
+
+    pub fn print_random() {
+        println!("I'm getting called but I need to be implemented");
     }
 }
 
