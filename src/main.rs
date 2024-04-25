@@ -1,21 +1,69 @@
 // todo:
-// - [ ] Implement ability to accept multiple files
 // - [ ] Implement ability to process flags to:
+//      - [ ] Print out Random words
 //      - [ ] List words
 // - [ ] Japanese words can have the same pronouciation, but different 
 //          meanings. Add functionality to store words and meanings, with 
 //          labels if they are verbs, nouns etc.
-// - [ ] Print out Random words
 // - [ ] Print out Random words of a specific type
 //
 //
 // todo:
-// - [ ] 
+// - [ ] Add processing args
+//      - [ ] This should happen in main. Use a struct to contain the args
+//              that aren't flags, and an enum for the different flags
+
+use std::{env, process};
+
+
 
 
 
 fn main() {
+    let local_args: Vec<String> = env::args().collect();
+    let arg_count = local_args.len();
+    let mut data = ss_data::SSData::new();
+
+    if arg_count == 1 {
+        eprintln!("Not enough args. Try ss -h or --help for help");
+        process::exit(1);
+    } else {
+        for a in local_args {
+            match a.as_str().trim() {
+                "-h" => {
+                    data.flags = Some(ss_data::Flags::Help);
+                }
+                _ => println!("Arg: {}", a),
+            }
+        }
+    }
+
     processes::process_files();
+}
+
+
+mod ss_data {
+    pub enum Flags {
+        Help,
+        PrintAll,
+        PrintRandom,
+    }
+
+
+    pub struct SSData {
+        pub flags: Option<Flags>,
+        pub file_args: Option<Vec<String>>,
+    }
+
+    impl SSData {
+        pub fn new() -> SSData {
+            let d = SSData {
+                flags: None,
+                file_args: None,
+            };
+            d
+        }
+    }
 }
 
 
@@ -57,7 +105,13 @@ mod processes {
         // read the file from the args
 
 
-        // Process chars, one-by-one
+        // Process chars, one-by-one, from multiple files.
+        // 
+        // problem
+        // current implementation only accounts for there being only files as
+        // args, no flags. Could replace the bool with a counter that subtacts
+        // 1 from the number of flags, and once it gets to zero, simply 
+        // processes the rest of the args as files.
         let mut p = JapaneseWordParser::new();
         let mut words: Vec<String> = Vec::new();
 
