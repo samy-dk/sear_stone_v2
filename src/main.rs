@@ -75,6 +75,7 @@ mod ss_data {
 
 
 mod processes {
+    use rand::Rng;
     use crate::structures::JapaneseWordParser;
     use core::panic;
     use std::collections::HashSet;
@@ -83,6 +84,9 @@ mod processes {
     use std::{env, process};
     use std::io::{BufReader, BufWriter};
     use std::io::prelude::*;
+
+
+    const SAVE_FILE: &str = "data/word_list.txt";
 
 
     // This is the main funciton. This will take a file and read the words,
@@ -100,11 +104,10 @@ mod processes {
 
 
         // make sure the word_list.txt file is there
-        let save_file = "data/word_list.txt";
 
-        if !Path::new(save_file).exists() {
+        if !Path::new(SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
-            let _file = File::create(save_file)
+            let _file = File::create(SAVE_FILE)
                 .expect("Could not create file");
         }
 
@@ -155,7 +158,7 @@ mod processes {
 
 
         // get words that were already in the file
-        let file = File::open(&save_file).expect("Could not open file");
+        let file = File::open(&SAVE_FILE).expect("Could not open file");
         let reader = BufReader::new(file);
         let mut file_words: Vec<String> = Vec::new();
 
@@ -178,7 +181,7 @@ mod processes {
 
 
         // save the new list of words to the file!
-        let file = File::create(&save_file).expect("Could not open file");
+        let file = File::create(&SAVE_FILE).expect("Could not open file");
         let mut file_writer = BufWriter::new(file);
 
         for word in file_words {
@@ -206,19 +209,17 @@ mod processes {
     }
 
     pub fn print_all() {
-        let save_file = "data/word_list.txt";
 
-        if !Path::new(save_file).exists() {
+        if !Path::new(SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
-            let _file = File::create(save_file)
+            let _file = File::create(SAVE_FILE)
                 .expect("Could not create file");
         }
 
-        let file = File::open(&save_file).expect("Could not open file");
+        let file = File::open(&SAVE_FILE).expect("Could not open file");
         let reader = BufReader::new(file);
 
         for l in reader.lines() {
-            println!("{:?}", l);
             match l {
                 Ok(w) => println!("{}", w),
                 Err(e) => println!("Error: {}", e),
@@ -227,9 +228,43 @@ mod processes {
     }
 
     pub fn print_random() {
-        println!("I'm getting called but I need to be implemented");
+        if !Path::new(SAVE_FILE).exists() {
+            let _dir = fs::create_dir("data");
+            let _file = File::create(SAVE_FILE)
+                .expect("Could not create file");
+        }
+
+        let file = File::open(&SAVE_FILE).expect("Could not open file");
+        let reader = BufReader::new(file);
+        // todo
+        // implement check to make sure that the same two words are printed
+
+        let limit = 10;
+        let mut rng = rand::thread_rng();
+        let file_vec: Vec<_> = reader.lines().collect();
+        let vec_len = file_vec.len();
+        let ran_num: Vec<usize> = (0..limit).map(|_|
+                                    rng.gen_range(0..=vec_len)).collect();
+
+        for n in ran_num {
+            let x: &String;
+            let temp: String = String::from("");
+            match &file_vec[n] {
+                Ok(v) => x = v,
+                Err(_) => {
+                    eprintln!("Err reading vec");
+                    x = &temp; 
+                }
+            }
+            println!("{}", x);
+
+        }
+
     }
+
+
 }
+
 
 mod structures {
     // JapaneseWordType is used to help the program know when what it's 
