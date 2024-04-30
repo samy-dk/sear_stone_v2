@@ -16,9 +16,6 @@
 use std::{env, process};
 
 
-
-
-
 fn main() {
     let local_args: Vec<String> = env::args().collect();
     let arg_count = local_args.len();
@@ -75,15 +72,11 @@ mod ss_data {
 
 
 mod processes {
+    use core;
+    use std::{collections, path, fs, env, process, io};
+    use std::io::prelude::*;
     use rand::Rng;
     use crate::structures::JapaneseWordParser;
-    use core::panic;
-    use std::collections::HashSet;
-    use std::path::Path;
-    use std::fs::{self, File};
-    use std::{env, process};
-    use std::io::{BufReader, BufWriter};
-    use std::io::prelude::*;
 
 
     const SAVE_FILE: &str = "data/word_list.txt";
@@ -105,9 +98,9 @@ mod processes {
 
         // make sure the word_list.txt file is there
 
-        if !Path::new(SAVE_FILE).exists() {
+        if !path::Path::new(SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
-            let _file = File::create(SAVE_FILE)
+            let _file = fs::File::create(SAVE_FILE)
                 .expect("Could not create file");
         }
 
@@ -151,21 +144,21 @@ mod processes {
         // What the crap is a hash set and how does it work?
         //
         // this removes duplicates
-        let mut seen = HashSet::new();
+        let mut seen = collections::HashSet::new();
 
         words.retain(|word|
                      seen.insert(word.clone()));
 
 
         // get words that were already in the file
-        let file = File::open(&SAVE_FILE).expect("Could not open file");
-        let reader = BufReader::new(file);
+        let file = fs::File::open(&SAVE_FILE).expect("Could not open file");
+        let reader = io::BufReader::new(file);
         let mut file_words: Vec<String> = Vec::new();
 
         for lines in reader.lines() {
             match lines {
                 Ok(v) => file_words.push(v),
-                _ => panic!("Could not get line from bufreader"),
+                _ => core::panic!("Could not get line from bufreader"),
             }
         }
 
@@ -173,7 +166,7 @@ mod processes {
         // add the words together, remove duplicates and sort
         file_words.append(&mut words);
 
-        let mut seen = HashSet::new();
+        let mut seen = collections::HashSet::new();
         file_words.retain(|word|
                           seen.insert(word.clone()));
 
@@ -181,8 +174,8 @@ mod processes {
 
 
         // save the new list of words to the file!
-        let file = File::create(&SAVE_FILE).expect("Could not open file");
-        let mut file_writer = BufWriter::new(file);
+        let file = fs::File::create(&SAVE_FILE).expect("Could not open file");
+        let mut file_writer = io::BufWriter::new(file);
 
         for word in file_words {
             writeln!(file_writer, "{}", word).expect("Failed to write to file");
@@ -210,14 +203,14 @@ mod processes {
 
     pub fn print_all() {
 
-        if !Path::new(SAVE_FILE).exists() {
+        if !path::Path::new(SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
-            let _file = File::create(SAVE_FILE)
+            let _file = fs::File::create(SAVE_FILE)
                 .expect("Could not create file");
         }
 
-        let file = File::open(&SAVE_FILE).expect("Could not open file");
-        let reader = BufReader::new(file);
+        let file = fs::File::open(&SAVE_FILE).expect("Could not open file");
+        let reader = io::BufReader::new(file);
 
         for l in reader.lines() {
             match l {
@@ -228,14 +221,14 @@ mod processes {
     }
 
     pub fn print_random() {
-        if !Path::new(SAVE_FILE).exists() {
+        if !path::Path::new(SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
-            let _file = File::create(SAVE_FILE)
+            let _file = fs::File::create(SAVE_FILE)
                 .expect("Could not create file");
         }
 
-        let file = File::open(&SAVE_FILE).expect("Could not open file");
-        let reader = BufReader::new(file);
+        let file = fs::File::open(&SAVE_FILE).expect("Could not open file");
+        let reader = io::BufReader::new(file);
         // todo
         // implement check to make sure that the same two words are printed
 
