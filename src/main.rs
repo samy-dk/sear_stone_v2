@@ -1,18 +1,16 @@
 // todo:
-// - [ ] Implement ability to process flags to:
-//      - [ ] Print out Random words
-//      - [ ] List words
 // - [ ] Japanese words can have the same pronouciation, but different 
 //          meanings. Add functionality to store words and meanings, with 
 //          labels if they are verbs, nouns etc.
-// - [ ] Print out Random words of a specific type
-//
+//          - [ ] Do this using json serialization 
+//              - [ ] This will include needing to change how things are
+//                      written and read!!!
+// - [/] Change program to use new JPWord struct
 //
 // todo:
-// - [ ] Add processing args
-//      - [ ] This should happen in main. Use a struct to contain the args
-//              that aren't flags, and an enum for the different flags
 
+
+//-----------------------------------------------------------------------------
 use std::{env, process};
 
 
@@ -76,7 +74,7 @@ mod processes {
     use std::{collections, path, fs, env, process, io};
     use std::io::prelude::*;
     use rand::Rng;
-    use crate::structures::JapaneseWordParser;
+    use crate::structures::{JPWord, JapaneseWordParser};
 
 
     const SAVE_FILE: &str = "data/word_list.txt";
@@ -116,7 +114,7 @@ mod processes {
         // 1 from the number of flags, and once it gets to zero, simply 
         // processes the rest of the args as files.
         let mut p = JapaneseWordParser::new();
-        let mut words: Vec<String> = Vec::new();
+        let mut words: Vec<JPWord> = Vec::new();
 
         let mut c = false;
         for a in local_args {
@@ -129,7 +127,7 @@ mod processes {
                     match p.add_to_word(ch) {
                         None => (),
                         Some(s) => {
-                            words.push(s);
+                            words.push(JPWord::simple_new(s));
                             p.word.clear();
                         }
                     }
@@ -137,6 +135,7 @@ mod processes {
 
             }
         }
+
         words.sort();
 
 
@@ -144,7 +143,8 @@ mod processes {
         // What the crap is a hash set and how does it work?
         //
         // this removes duplicates
-        let mut seen = collections::HashSet::new();
+        let mut seen: collections::HashSet<JPWord> = collections::HashSet::new();
+
 
         words.retain(|word|
                      seen.insert(word.clone()));
@@ -153,11 +153,11 @@ mod processes {
         // get words that were already in the file
         let file = fs::File::open(&SAVE_FILE).expect("Could not open file");
         let reader = io::BufReader::new(file);
-        let mut file_words: Vec<String> = Vec::new();
+        let mut file_words: Vec<JPWord> = Vec::new();
 
         for lines in reader.lines() {
             match lines {
-                Ok(v) => file_words.push(v),
+                Ok(v) => file_words.push(JPWord::simple_new(v)),
                 _ => core::panic!("Could not get line from bufreader"),
             }
         }
@@ -177,6 +177,8 @@ mod processes {
         let file = fs::File::create(&SAVE_FILE).expect("Could not open file");
         let mut file_writer = io::BufWriter::new(file);
 
+        //todo
+        //need to implement fmt::display 
         for word in file_words {
             writeln!(file_writer, "{}", word).expect("Failed to write to file");
         }
@@ -260,6 +262,78 @@ mod processes {
 
 
 mod structures {
+    use serde::{Serialize, Deserialize};
+    use core::fmt;
+    use std::cmp::Ordering;
+    
+    #[derive(Serialize, Deserialize, Eq, PartialEq, Hash, Clone)]
+    enum WordType {
+        Noun,
+        Pronoun,
+        Verb,
+        Adjective,
+        Adverb,
+        Preposition,
+        Conjunction,
+        Interjection,
+        Article,
+        Quantifier,
+        Auxiliary,
+    }
+
+
+    #[derive(Serialize, Deserialize, Eq, PartialEq, Hash, Clone)]
+    pub struct JPWord {
+        pub word: String,
+        word_type: Option<WordType>,
+        definition: Option<String>,
+        different_meanings: bool,
+    }
+
+
+    impl JPWord {
+        pub fn simple_new (w: String) -> JPWord {
+            let _word = JPWord {
+                word: w,
+                word_type: None,
+                definition: None,
+                different_meanings: false,
+            };
+            _word
+        }
+
+        pub fn set_type(&mut self) -> () {
+        }
+
+        pub fn set_definitioni(&mut self) -> () {
+        }
+
+        pub fn are_diff_meanings(&mut self, b: bool) -> () {
+            self.different_meanings = b;
+        }
+
+    }
+
+    impl PartialOrd for JPWord {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+        
+    impl Ord for JPWord {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.word.cmp(&other.word)
+        }
+    }
+
+    impl fmt::Display for JPWord {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.word)
+        }
+    }
+
+
+
     // JapaneseWordType is used to help the program know when what it's 
     // reading is Hiragana, Katakana, or neither. It's important, because 
     // words must be of the same type. Once the type changes, it must be a new
@@ -270,6 +344,8 @@ mod structures {
         Katakana,
         Neither,
     }
+
+
 
 
     // JapaneseWordParser is used to parser together japanese words. It's 
