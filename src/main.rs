@@ -239,7 +239,7 @@ mod processes {
         let file_vec: Vec<_> = reader.lines().collect();
         let vec_len = file_vec.len();
         let ran_num: Vec<usize> = (0..limit).map(|_|
-                                    rng.gen_range(0..=vec_len)).collect();
+                                    rng.gen_range(0..=vec_len-1)).collect();
 
         for n in ran_num {
             let x: &String;
