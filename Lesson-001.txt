@@ -1,0 +1,94 @@
+    6がつ　２１にち　すいようび
+
+    Greetings
+
+    ●おはよう
+    Good morning
+
+    ●こんにちは
+    Konnichiwa
+    Hello
+
+    ●すみません
+    Excuse me, sorry
+
+    ●ごめんなさい
+    Sorry, apologise
+
+
+    Date
+
+    6がつ　June
+    ８がつ　August
+    3がつ　March
+    １２がつ　December
+
+    １３にち　13th
+    21にち　21st
+
+    ●6がつ　２１にち　です
+    It is June 21st
+
+
+    Days of the week
+
+    Monday   げつようび
+    Tuesday   かようび
+    Wednesday   すいようび
+    Thursday   もくようび
+    Friday   きんようび
+    Saturday  どようび  bi
+    Sunday   にちようび
+
+
+    Q＆A
+
+    ●なんじ　ですか？
+    What time is it?
+
+    ●６じ　２０ふん　です
+    It is 6:20
+
+    ●なんにち　ですか？
+    What is the date?
+
+    ●６がつ　２１にち　です
+    It is June 21st.
+
+    ●５がつ　２２にち
+
+    ●なんようび　ですか？
+    What day is it?
+
+    ●すいようび　です
+    It is Wednesday
+
+
+
+    Colors　　いろ
+
+    あかいろ　Red
+    あおいろ　Blue
+    くろいろ　Black
+    しろいろ　White
+    きいろ　Yellow
+    みずいろ　Light blue   みず Water
+    ちゃいろ　Brown   ちゃ（おちゃ）tea
+    はいいろ　Grey   はい　Ash
+
+    みどりいろ　Green
+    むらさきいろ　Murasaki iro    Purple
+
+    きんいろ　Gold     きん Actual gold
+    ぎんいろ　Silver    ぎん Actual silver
+
+    ●なにいろ　ですか？
+    What color is it?
+
+    ●あかいろ　です
+    It is red
+
+    なん　Number answer (What time, What page, What number…)
+    なに　Word answer (What do you do, What did you do)
+
+
