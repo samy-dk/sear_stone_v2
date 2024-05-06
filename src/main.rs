@@ -2,12 +2,9 @@
 // - [ ] Japanese words can have the same pronouciation, but different 
 //          meanings. Add functionality to store words and meanings, with 
 //          labels if they are verbs, nouns etc.
-//          - [ ] Do this using json serialization 
+//          - [/] Do this using json serialization 
 //              - [ ] This will include needing to change how things are
 //                      written and read!!!
-// - [/] Change program to use new JPWord struct
-//
-// todo:
 
 
 //-----------------------------------------------------------------------------
