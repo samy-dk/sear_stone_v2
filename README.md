@@ -17,6 +17,8 @@ Lessons that you can use to verify the code works for yourself!
 
     git clone https://github.com/samy-dk/sear_stone_v2.git
 
+   then
+
     cd sear_stone_v2
 
    Then, you can use
