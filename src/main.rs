@@ -36,7 +36,7 @@ fn main() {
         Some(ss_data::Flags::Help) => processes::print_help(),
         Some(ss_data::Flags::PrintAll) => processes::print_all(),
         Some(ss_data::Flags::PrintRandom) => processes::print_random(),
-        None => processes::process_files(),
+        None => processes::process_files().expect("Processing Failed"),
     }
 
 }
@@ -69,18 +69,19 @@ mod ss_data {
 mod processes {
     use core;
     use std::{collections, path, fs, env, process, io};
+    use std:: error::Error;
     use std::io::prelude::*;
     use rand::Rng;
     use crate::structures::{JPWord, JapaneseWordParser};
 
 
-    const SAVE_FILE: &str = "data/word_list.txt";
+    const J_SAVE_FILE: &str = "data/word_list.json";
 
 
     // This is the main funciton. This will take a file and read the words,
     // combine with the old list, remove duplicates, sort and then store the
     // words!
-    pub fn process_files() {
+    pub fn process_files() -> Result<(), Box<dyn Error>> {
         // process the args
         let local_args: Vec<String> = env::args().collect();
         let arg_count = local_args.len();
@@ -92,17 +93,14 @@ mod processes {
 
 
         // make sure the word_list.txt file is there
-
-        if !path::Path::new(SAVE_FILE).exists() {
+        if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
-            let _file = fs::File::create(SAVE_FILE)
+            let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
 
         // read the file from the args
-
-
         // Process chars, one-by-one, from multiple files.
         // 
         // problem
@@ -129,9 +127,9 @@ mod processes {
                         }
                     }
                 }
-
             }
         }
+
 
         words.sort();
 
@@ -148,37 +146,32 @@ mod processes {
 
 
         // get words that were already in the file
-        let file = fs::File::open(&SAVE_FILE).expect("Could not open file");
-        let reader = io::BufReader::new(file);
-        let mut file_words: Vec<JPWord> = Vec::new();
-
-        for lines in reader.lines() {
-            match lines {
-                Ok(v) => file_words.push(JPWord::simple_new(v)),
-                _ => core::panic!("Could not get line from bufreader"),
-            }
-        }
+        //
+        let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
+                            
+        let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+            Vec::new()
+        } else {
+            serde_json::from_str(&f_words).expect("Could not parse json from file")
+        };
 
 
         // add the words together, remove duplicates and sort
-        file_words.append(&mut words);
+        d_f_words.append(&mut words);
 
         let mut seen = collections::HashSet::new();
-        file_words.retain(|word|
+        d_f_words.retain(|word|
                           seen.insert(word.clone()));
 
-        file_words.sort();
+        d_f_words.sort();
 
 
         // save the new list of words to the file!
-        let file = fs::File::create(&SAVE_FILE).expect("Could not open file");
-        let mut file_writer = io::BufWriter::new(file);
 
-        //todo
-        //need to implement fmt::display 
-        for word in file_words {
-            writeln!(file_writer, "{}", word).expect("Failed to write to file");
-        }
+        let stringified =  serde_json::to_string(&d_f_words).expect("Could not parse into JSON before writing");
+        fs::write(J_SAVE_FILE, &stringified)?;
+        Ok(())
+
     }
 
     pub fn print_help() {
@@ -202,54 +195,51 @@ mod processes {
 
     pub fn print_all() {
 
-        if !path::Path::new(SAVE_FILE).exists() {
+        if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
-            let _file = fs::File::create(SAVE_FILE)
+            let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
-        let file = fs::File::open(&SAVE_FILE).expect("Could not open file");
-        let reader = io::BufReader::new(file);
+        let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
 
-        for l in reader.lines() {
-            match l {
-                Ok(w) => println!("{}", w),
-                Err(e) => println!("Error: {}", e),
-            }
+        let d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+            Vec::new()
+        } else {
+            serde_json::from_str(&f_words).expect("Could not parse json from file")
+        };
+
+        for w in d_f_words {
+            println!("{}", w.word);
         }
     }
 
     pub fn print_random() {
-        if !path::Path::new(SAVE_FILE).exists() {
+        if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
-            let _file = fs::File::create(SAVE_FILE)
+            let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
-        let file = fs::File::open(&SAVE_FILE).expect("Could not open file");
-        let reader = io::BufReader::new(file);
+        let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
+
+        let d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+            Vec::new()
+        } else {
+            serde_json::from_str(&f_words).expect("Could not parse json from file")
+        };
+
         // todo
         // implement check to make sure that the same two words are printed
 
         let limit = 10;
         let mut rng = rand::thread_rng();
-        let file_vec: Vec<_> = reader.lines().collect();
-        let vec_len = file_vec.len();
+        let vec_len = d_f_words.len();
         let ran_num: Vec<usize> = (0..limit).map(|_|
                                     rng.gen_range(0..=vec_len-1)).collect();
 
         for n in ran_num {
-            let x: &String;
-            let temp: String = String::from("");
-            match &file_vec[n] {
-                Ok(v) => x = v,
-                Err(_) => {
-                    eprintln!("Err reading vec");
-                    x = &temp; 
-                }
-            }
-            println!("{}", x);
-
+            println!("{}", d_f_words[n].word);
         }
 
     }
@@ -263,7 +253,7 @@ mod structures {
     use core::fmt;
     use std::cmp::Ordering;
     
-    #[derive(Serialize, Deserialize, Eq, PartialEq, Hash, Clone)]
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
     enum WordType {
         Noun,
         Pronoun,
@@ -279,7 +269,7 @@ mod structures {
     }
 
 
-    #[derive(Serialize, Deserialize, Eq, PartialEq, Hash, Clone)]
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
     pub struct JPWord {
         pub word: String,
         word_type: Option<WordType>,
