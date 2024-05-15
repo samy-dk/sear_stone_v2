@@ -30,6 +30,8 @@ fn main() {
             "--print-random" => data.flags = Some(ss_data::Flags::PrintRandom),
             "-s" => data.flags = Some(ss_data::Flags::AddMeaning),
             "--set-meaning" => data.flags = Some(ss_data::Flags::AddMeaning),
+            "-t" => data.flags = Some(ss_data::Flags::Test),
+            "--test" => data.flags = Some(ss_data::Flags::Test),
             _ => println!("Arg: {}", a),
         }
     }
@@ -39,6 +41,7 @@ fn main() {
         Some(ss_data::Flags::PrintAll) => processes::print_all(),
         Some(ss_data::Flags::PrintRandom) => processes::print_random(),
         Some(ss_data::Flags::AddMeaning) => processes::set_meaning(),
+        Some(ss_data::Flags::Test) => processes::test(),
         None => processes::process_files().expect("Processing Failed"),
     }
 
@@ -51,6 +54,7 @@ mod ss_data {
         PrintAll,
         PrintRandom,
         AddMeaning,
+        Test,
     }
 
     pub struct SSData {
@@ -153,6 +157,7 @@ mod processes {
         //
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
                             
+        // d_f_words means deserialized_file_words
         let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             Vec::new()
         } else {
@@ -309,6 +314,7 @@ mod processes {
         println!("9  -> Article");
         println!("10 -> Quantifier");
         println!("11 -> Auxiliary");
+        println!("12 -> Phrase");
         io::stdin()
             .read_line(&mut u_prompt)
             .expect("Could not read input from user");
@@ -352,6 +358,40 @@ mod processes {
             .expect("Could not write to file");
     }
 
+    pub fn test() -> () {
+        if !path::Path::new(J_SAVE_FILE).exists() {
+            let _dir = fs::create_dir("data");
+            let _file = fs::File::create(J_SAVE_FILE)
+                .expect("Could not create file");
+        }
+
+        let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
+
+        let d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+            eprintln!("File is empty! Can't define any words...");
+            process::exit(1);
+        } else {
+            serde_json::from_str(&f_words).expect("Could not parse json from file")
+        };
+
+        let mut rng = rand::thread_rng();
+        let r_num = rng.gen_range(0..=&d_f_words.len()-1);
+
+        println!("Here is a test!");
+        println!("What is {} ?", d_f_words[r_num].word);
+
+        let mut _buffer = String::new();
+        let _input = io::stdin().read_line(&mut _buffer);
+
+        let def_option = &d_f_words[r_num]
+            .definition;
+        let def = match def_option {
+            Some(v) => String::from(v.trim()),
+            None => String::from("No Definition"),
+        };
+        println!("\nThe answer is:\n{}", def);
+    }
+
 }
 
 
@@ -375,6 +415,7 @@ mod structures {
         Article,
         Quantifier,
         Auxiliary,
+        Phrase
     }
 
 
