@@ -28,6 +28,8 @@ fn main() {
             "--print-all" => data.flags = Some(ss_data::Flags::PrintAll),
             "-pr" => data.flags = Some(ss_data::Flags::PrintRandom),
             "--print-random" => data.flags = Some(ss_data::Flags::PrintRandom),
+            "-s" => data.flags = Some(ss_data::Flags::AddMeaning),
+            "--set-meaning" => data.flags = Some(ss_data::Flags::AddMeaning),
             _ => println!("Arg: {}", a),
         }
     }
@@ -36,6 +38,7 @@ fn main() {
         Some(ss_data::Flags::Help) => processes::print_help(),
         Some(ss_data::Flags::PrintAll) => processes::print_all(),
         Some(ss_data::Flags::PrintRandom) => processes::print_random(),
+        Some(ss_data::Flags::AddMeaning) => processes::set_meaning(),
         None => processes::process_files().expect("Processing Failed"),
     }
 
@@ -47,6 +50,7 @@ mod ss_data {
         Help,
         PrintAll,
         PrintRandom,
+        AddMeaning,
     }
 
     pub struct SSData {
@@ -72,7 +76,7 @@ mod processes {
     use std:: error::Error;
     use std::io::prelude::*;
     use rand::Rng;
-    use crate::structures::{JPWord, JapaneseWordParser};
+    use crate::structures::{JPWord, JapaneseWordParser, WordType};
 
 
     const J_SAVE_FILE: &str = "data/word_list.json";
@@ -244,6 +248,109 @@ mod processes {
 
     }
 
+    pub fn set_meaning() -> () {
+        // Read current list of words, in word_list.json
+        if !path::Path::new(J_SAVE_FILE).exists() {
+            let _dir = fs::create_dir("data");
+            let _file = fs::File::create(J_SAVE_FILE)
+                .expect("Could not create file");
+        }
+
+        let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
+
+        let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+            eprintln!("File is empty! Can't define any words...");
+            process::exit(1);
+        } else {
+            serde_json::from_str(&f_words).expect("Could not parse json from file")
+        };
+
+        // prompt user for the word they would like to define
+        let mut u_prompt: String = String::new();
+        println!("Please enter the word you'd like to define: ");
+
+        io::stdin().read_line(&mut u_prompt).expect("Could not read input");
+
+        if u_prompt.trim().is_empty() {
+            eprintln!("Nothing entered! Exiting program now");
+            process::exit(1);
+        }
+
+        // find that word
+        let index = d_f_words.iter().position(|item| item.word == u_prompt.trim());
+
+        // if I can find the word, grab it's index
+        let index = match index {
+            Some(i) => i,
+            None => {
+                // if I can't find the word, let the user know and end
+                eprintln!("Could not find that word! Exiting program now");
+                process::exit(1);
+            }
+        };
+        println!("I found the word! Let's add some definition to it!");
+
+        // prompt the user to add the following:
+        // word type, this will list the word types and ask the user to 
+        //     enter a number that corresponds with that type
+        // definition, user will type out the definition
+        let mut u_prompt = String::new();
+
+        println!("What type of word is it?");
+        println!("Please enter the corresponding number, or 0 to skip");
+        println!("1  -> Noun");
+        println!("2  -> Pronoun");
+        println!("3  -> Verb");
+        println!("4  -> Adjective");
+        println!("5  -> Adverb");
+        println!("6  -> Preposition");
+        println!("7  -> Conjuntion");
+        println!("8  -> Interjunction");
+        println!("9  -> Article");
+        println!("10 -> Quantifier");
+        println!("11 -> Auxiliary");
+        io::stdin()
+            .read_line(&mut u_prompt)
+            .expect("Could not read input from user");
+        let u_prompt: u32 = match u_prompt.trim().parse() {
+            Ok(num) => num,
+            Err(e) => panic!("Could not parse number: {}", e),
+        };
+
+        d_f_words[index].word_type = match u_prompt {
+            0 => None,
+            1 => Some(WordType::Noun),
+            2 => Some(WordType:: Pronoun),
+            3 => Some(WordType::Verb),
+            4 => Some(WordType::Adjective),
+            5 => Some(WordType::Adverb),
+            6 => Some(WordType::Preposition),
+            7 => Some(WordType::Conjunction),
+            8 => Some(WordType::Interjection),
+            9 => Some(WordType::Article),
+            10 => Some(WordType::Quantifier),
+            11 => Some(WordType::Auxiliary),
+            _ => {
+                eprintln!("Invalid number. Skipping to next part");
+                None
+            }
+        };
+
+        println!("Alright, what does this word mean?");
+        println!("Please, do not hit enter or enter a newline char in your response");
+
+        let mut u_prompt = String::new();
+        io::stdin()
+            .read_line(&mut u_prompt)
+            .expect("Could not read input from user");
+
+        d_f_words[index].definition = Some(u_prompt);
+
+        // save the new vec to the file
+        let stringified = serde_json::to_string(&d_f_words).expect("Could not parse into JSON before writing");
+        fs::write(J_SAVE_FILE, &stringified)
+            .expect("Could not write to file");
+    }
 
 }
 
@@ -252,9 +359,11 @@ mod structures {
     use serde::{Serialize, Deserialize};
     use core::fmt;
     use std::cmp::Ordering;
+
+
     
     #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
-    enum WordType {
+    pub enum WordType {
         Noun,
         Pronoun,
         Verb,
@@ -272,8 +381,8 @@ mod structures {
     #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
     pub struct JPWord {
         pub word: String,
-        word_type: Option<WordType>,
-        definition: Option<String>,
+        pub word_type: Option<WordType>,
+        pub definition: Option<String>,
         different_meanings: bool,
     }
 
@@ -287,16 +396,6 @@ mod structures {
                 different_meanings: false,
             };
             _word
-        }
-
-        pub fn set_type(&mut self) -> () {
-        }
-
-        pub fn set_definitioni(&mut self) -> () {
-        }
-
-        pub fn are_diff_meanings(&mut self, b: bool) -> () {
-            self.different_meanings = b;
         }
 
     }
@@ -395,7 +494,7 @@ mod structures {
             // there is something to return, return it.
             // todo:
             // - [ ] Find out what happens when a katakana is next to a 
-            //          hiragana char, or vic-versa. Does it end up returning
+            //          hiragana char, or vis-versa. Does it end up returning
             //          a mixed hiragana and katakana word?
             //  
             //  the else statment covers if nothing has changed, just add the
