@@ -1,12 +1,4 @@
 // todo:
-// - [ ] Japanese words can have the same pronouciation, but different 
-//          meanings. Add functionality to store words and meanings, with 
-//          labels if they are verbs, nouns etc.
-//          - [/] Do this using json serialization 
-//              - [ ] This will include needing to change how things are
-//                      written and read!!!
-
-
 //-----------------------------------------------------------------------------
 use std::{env, process};
 
@@ -30,6 +22,10 @@ fn main() {
             "--print-random" => data.flags = Some(ss_data::Flags::PrintRandom),
             "-s" => data.flags = Some(ss_data::Flags::AddMeaning),
             "--set-meaning" => data.flags = Some(ss_data::Flags::AddMeaning),
+            "-aw" => data.flags = Some(ss_data::Flags::AddWord),
+            "--add-word" => data.flags = Some(ss_data::Flags::AddWord),
+            "-rw" => data.flags = Some(ss_data::Flags::RemoveWord),
+            "--remove-word" => data.flags = Some(ss_data::Flags::RemoveWord),
             "-t" => data.flags = Some(ss_data::Flags::Test),
             "--test" => data.flags = Some(ss_data::Flags::Test),
             _ => println!("Arg: {}", a),
@@ -41,6 +37,8 @@ fn main() {
         Some(ss_data::Flags::PrintAll) => processes::print_all(),
         Some(ss_data::Flags::PrintRandom) => processes::print_random(),
         Some(ss_data::Flags::AddMeaning) => processes::set_meaning(),
+        Some(ss_data::Flags::AddWord) => processes::add_word(),
+        Some(ss_data::Flags::RemoveWord) => processes::remove_word(),
         Some(ss_data::Flags::Test) => processes::test(),
         None => processes::process_files().expect("Processing Failed"),
     }
@@ -54,6 +52,8 @@ mod ss_data {
         PrintAll,
         PrintRandom,
         AddMeaning,
+        AddWord,
+        RemoveWord,
         Test,
     }
 
@@ -76,6 +76,7 @@ mod ss_data {
 
 mod processes {
     use core;
+    use std::process::exit;
     use std::{collections, path, fs, env, process, io};
     use std:: error::Error;
     use std::io::prelude::*;
@@ -183,6 +184,8 @@ mod processes {
 
     }
 
+
+    // todo - needs updating
     pub fn print_help() {
         println!("Welcome to sear_stone! This program pulls Japanese words out");
         println!("of files to aid in study.");
@@ -351,6 +354,140 @@ mod processes {
             .expect("Could not read input from user");
 
         d_f_words[index].definition = Some(u_prompt);
+
+        // save the new vec to the file
+        let stringified = serde_json::to_string(&d_f_words).expect("Could not parse into JSON before writing");
+        fs::write(J_SAVE_FILE, &stringified)
+            .expect("Could not write to file");
+    }
+
+
+    pub fn add_word() -> () {
+        if !path::Path::new(J_SAVE_FILE).exists() {
+            let _dir = fs::create_dir("data");
+            let _file = fs::File::create(J_SAVE_FILE)
+                .expect("Could not create file");
+        }
+
+        let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
+
+        let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+            eprintln!("File is empty! Can't define any words...");
+            process::exit(1);
+        } else {
+            serde_json::from_str(&f_words).expect("Could not parse json from file")
+        };
+
+        let mut input = String::new();
+        println!("What word would you like to add?");
+        io::stdin().read_line(&mut input).expect("Could not read input");
+
+        // Check if word is in list
+        for w in &d_f_words {
+            if w.word == String::from(input.trim()) {
+                eprintln!("Sorry, that word is already in the list!!!");
+                process::exit(0);
+            }
+        }
+
+        d_f_words.push(JPWord::simple_new(String::from(input.trim())));
+        let word_index = d_f_words.len() - 1;
+
+        let mut u_prompt = String::new();
+
+        println!("What type of word is it?");
+        println!("Please enter the corresponding number, or 0 to skip");
+        println!("1  -> Noun");
+        println!("2  -> Pronoun");
+        println!("3  -> Verb");
+        println!("4  -> Adjective");
+        println!("5  -> Adverb");
+        println!("6  -> Preposition");
+        println!("7  -> Conjuntion");
+        println!("8  -> Interjunction");
+        println!("9  -> Article");
+        println!("10 -> Quantifier");
+        println!("11 -> Auxiliary");
+        println!("12 -> Phrase");
+        io::stdin()
+            .read_line(&mut u_prompt)
+            .expect("Could not read input from user");
+        let u_prompt: u32 = match u_prompt.trim().parse() {
+            Ok(num) => num,
+            Err(e) => panic!("Could not parse number: {}", e),
+        };
+
+        d_f_words[word_index].word_type = match u_prompt {
+            0 => None,
+            1 => Some(WordType::Noun),
+            2 => Some(WordType:: Pronoun),
+            3 => Some(WordType::Verb),
+            4 => Some(WordType::Adjective),
+            5 => Some(WordType::Adverb),
+            6 => Some(WordType::Preposition),
+            7 => Some(WordType::Conjunction),
+            8 => Some(WordType::Interjection),
+            9 => Some(WordType::Article),
+            10 => Some(WordType::Quantifier),
+            11 => Some(WordType::Auxiliary),
+            _ => {
+                eprintln!("Invalid number. Skipping to next part");
+                None
+            }
+        };
+
+        println!("Alright, what does this word mean?");
+        println!("Please, do not hit enter or enter a newline char in your response");
+
+        let mut u_prompt = String::new();
+        io::stdin()
+            .read_line(&mut u_prompt)
+            .expect("Could not read input from user");
+
+        d_f_words[word_index].definition = Some(u_prompt);
+
+        // save the new vec to the file
+        let stringified = serde_json::to_string(&d_f_words).expect("Could not parse into JSON before writing");
+        fs::write(J_SAVE_FILE, &stringified)
+            .expect("Could not write to file");
+    }
+
+    pub fn remove_word() -> () {
+        if !path::Path::new(J_SAVE_FILE).exists() {
+            let _dir = fs::create_dir("data");
+            let _file = fs::File::create(J_SAVE_FILE)
+                .expect("Could not create file");
+        }
+
+        let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
+
+        let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+            eprintln!("File is empty! Can't define any words...");
+            process::exit(1);
+        } else {
+            serde_json::from_str(&f_words).expect("Could not parse json from file")
+        };
+
+        let mut input = String::new();
+        println!("What word would you like to remove?");
+        io::stdin().read_line(&mut input).expect("Could not read input");
+
+        // Check if word is in list
+        let mut exist = false;
+        for w in &d_f_words {
+            if w.word == String::from(input.trim()) {
+                exist = true;
+                break;
+            }
+        }
+
+        if !exist {
+            eprintln!("Sorry, that word does not exist in the list");
+            process::exit(0);
+        }
+
+        d_f_words.retain(|x| x.word != input.trim());
+        println!("Succesfully removed the word!");
 
         // save the new vec to the file
         let stringified = serde_json::to_string(&d_f_words).expect("Could not parse into JSON before writing");
