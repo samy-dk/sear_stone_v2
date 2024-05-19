@@ -561,7 +561,6 @@ mod structures {
         pub word: String,
         pub word_type: Option<WordType>,
         pub definition: Option<String>,
-        different_meanings: bool,
     }
 
 
@@ -571,7 +570,6 @@ mod structures {
                 word: w,
                 word_type: None,
                 definition: None,
-                different_meanings: false,
             };
             _word
         }
@@ -595,7 +593,6 @@ mod structures {
             write!(f, "{}", self.word)
         }
     }
-
 
 
     // JapaneseWordType is used to help the program know when what it's 
