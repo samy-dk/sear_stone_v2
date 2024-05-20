@@ -244,11 +244,17 @@ mod processes {
         // todo
         // implement check to make sure that the same two words are printed
 
-        let limit = 10;
         let mut rng = rand::thread_rng();
-        let vec_len = d_f_words.len();
-        let ran_num: Vec<usize> = (0..limit).map(|_|
-                                    rng.gen_range(0..=vec_len-1)).collect();
+        let vec_len = d_f_words.len() - 1;
+
+        let mut ran_num: Vec<usize> = Vec::new();
+
+        while ran_num.len() < 10 {
+            let t = rng.gen_range(0..=vec_len);
+            if !ran_num.contains(&t) {
+                ran_num.push(t);
+            }
+        }
 
         for n in ran_num {
             println!("{}", d_f_words[n].word);
