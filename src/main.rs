@@ -1,20 +1,30 @@
-// todo:
-// - [ ] Update help() function to include all functionality.
-// - [ ] remove the println! that says what the args are. It was for 
-//          debugging, I don't need it now.
+// 
 //-----------------------------------------------------------------------------
 use std::{env, process};
 
 
 fn main() {
+    // Collect args and get args len.
     let local_args: Vec<String> = env::args().collect();
     let arg_count = local_args.len();
+
+    // Create struct that will guide the rest of the programs processing.
     let mut data = ss_data::SSData::new();
 
+    // If there are no arguments, let the user know and end program.
     if arg_count == 1 {
-        eprintln!("Not enough args. Try ss -h or --help for help");
+        eprintln!("Not enough args. Try ss -h or --help for help to learn");
+        eprintln!("about sear_stone.");
         process::exit(1);
     } 
+
+    // Get the flag based on user input.
+    //
+    // Note, this is stupid. There can only be one flag. I think I planned
+    // on potentially haveing multiple flags that could be passed in, but I 
+    // never did that, so the for loop is pointless...
+    //
+    // But I don't care to change it.
     for a in local_args {
         match a.as_str().trim() {
             "-h" => data.flags = Some(ss_data::Flags::Help),
@@ -35,6 +45,7 @@ fn main() {
         }
     }
 
+    // Based on the flag, call the right processes.
     match data.flags {
         Some(ss_data::Flags::Help) => processes::print_help(),
         Some(ss_data::Flags::PrintAll) => processes::print_all(),
@@ -45,10 +56,10 @@ fn main() {
         Some(ss_data::Flags::Test) => processes::test(),
         None => processes::process_files().expect("Processing Failed"),
     }
-
 }
 
 
+// Contains the structs neseccary for the program to execute correctly. 
 mod ss_data {
     pub enum Flags {
         Help,
@@ -59,6 +70,7 @@ mod ss_data {
         RemoveWord,
         Test,
     }
+
 
     pub struct SSData {
         pub flags: Option<Flags>,
@@ -77,16 +89,17 @@ mod ss_data {
 }
 
 
+// Mod contains all processes, as well as the structs neseccary for processing.
 mod processes {
-    use core;
-    use std::process::exit;
     use std::{collections, path, fs, env, process, io};
     use std:: error::Error;
-    use std::io::prelude::*;
     use rand::Rng;
     use crate::structures::{JPWord, JapaneseWordParser, WordType};
 
 
+    // Where data is saved.
+    //
+    // I should probably change this, but, eh....
     const J_SAVE_FILE: &str = "data/word_list.json";
 
 
@@ -98,28 +111,21 @@ mod processes {
         let local_args: Vec<String> = env::args().collect();
         let arg_count = local_args.len();
 
+        // Remember, this is all the args passed into the program.
         if arg_count == 1 {
             eprintln!("No file given");
             process::exit(1);
         }
 
-
-        // make sure the word_list.txt file is there
+        // make sure the word_list.json file is there
         if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
             let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
-
         // read the file from the args
         // Process chars, one-by-one, from multiple files.
-        // 
-        // problem
-        // current implementation only accounts for there being only files as
-        // args, no flags. Could replace the bool with a counter that subtacts
-        // 1 from the number of flags, and once it gets to zero, simply 
-        // processes the rest of the args as files.
         let mut p = JapaneseWordParser::new();
         let mut words: Vec<JPWord> = Vec::new();
 
@@ -142,53 +148,40 @@ mod processes {
             }
         }
 
-
         words.sort();
 
-
-        // to learn
-        // What the crap is a hash set and how does it work?
-        //
-        // this removes duplicates
+        // This removes duplicates.
         let mut seen: collections::HashSet<JPWord> = collections::HashSet::new();
-
-
         words.retain(|word|
                      seen.insert(word.clone()));
 
-
-        // get words that were already in the file
-        //
+        // Get words that were already in the file.
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
                             
-        // d_f_words means deserialized_file_words
+        // d_f_words means deserialized_file_words.
         let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             Vec::new()
         } else {
             serde_json::from_str(&f_words).expect("Could not parse json from file")
         };
 
-
-        // add the words together, remove duplicates and sort
+        // Add the words together, remove duplicates and sort.
         d_f_words.append(&mut words);
 
+        // Sort.
         let mut seen = collections::HashSet::new();
         d_f_words.retain(|word|
                           seen.insert(word.clone()));
-
         d_f_words.sort();
 
-
         // save the new list of words to the file!
-
         let stringified =  serde_json::to_string(&d_f_words).expect("Could not parse into JSON before writing");
         fs::write(J_SAVE_FILE, &stringified)?;
         Ok(())
-
     }
 
 
-    // todo - needs updating
+    // Print a help menu.
     pub fn print_help() {
         println!("Welcome to sear_stone! This program pulls Japanese words out");
         println!("of files to aid in study.");
@@ -219,50 +212,60 @@ mod processes {
         println!("");
     }
 
+    
+    // Print all the words in the word_list.json file.
     pub fn print_all() {
-
+        // Check if file exists.
         if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
             let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
+        // Get the string.
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
 
+        // Deserialize the string.
         let d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             Vec::new()
         } else {
             serde_json::from_str(&f_words).expect("Could not parse json from file")
         };
 
+        // Print it out!
         for w in d_f_words {
             println!("{}", w.word);
         }
     }
 
+
+    // Print 10 random words.
     pub fn print_random() {
+        // Make sure the file is there.
         if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
             let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
+        // Read file to string.
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
 
+        // Deserialzie the string.
         let d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             Vec::new()
         } else {
             serde_json::from_str(&f_words).expect("Could not parse json from file")
         };
 
-        // todo
-        // implement check to make sure that the same two words are printed
-
+        // Get the things I need to print out random words.
         let mut rng = rand::thread_rng();
         let vec_len = d_f_words.len() - 1;
 
+        // Create vec to hold the random numbers.
         let mut ran_num: Vec<usize> = Vec::new();
 
+        // Get 10 random numbers within range.
         while ran_num.len() < 10 {
             let t = rng.gen_range(0..=vec_len);
             if !ran_num.contains(&t) {
@@ -270,12 +273,14 @@ mod processes {
             }
         }
 
+        // Print out random words.
         for n in ran_num {
             println!("{}", d_f_words[n].word);
         }
-
     }
 
+
+    // Set a type and definition for a word that is part of the list
     pub fn set_meaning() -> () {
         // Read current list of words, in word_list.json
         if !path::Path::new(J_SAVE_FILE).exists() {
@@ -284,8 +289,10 @@ mod processes {
                 .expect("Could not create file");
         }
 
+        // Get the string from file.
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
 
+        // Deserialize the string.
         let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             eprintln!("File is empty! Can't define any words...");
             process::exit(1);
@@ -296,9 +303,9 @@ mod processes {
         // prompt user for the word they would like to define
         let mut u_prompt: String = String::new();
         println!("Please enter the word you'd like to define: ");
-
         io::stdin().read_line(&mut u_prompt).expect("Could not read input");
 
+        // Check for nothing.
         if u_prompt.trim().is_empty() {
             eprintln!("Nothing entered! Exiting program now");
             process::exit(1);
@@ -320,10 +327,9 @@ mod processes {
 
         // prompt the user to add the following:
         // word type, this will list the word types and ask the user to 
-        //     enter a number that corresponds with that type
+        // enter a number that corresponds with that type
         // definition, user will type out the definition
         let mut u_prompt = String::new();
-
         println!("What type of word is it?");
         println!("Please enter the corresponding number, or 0 to skip");
         println!("1  -> Noun");
@@ -346,6 +352,7 @@ mod processes {
             Err(e) => panic!("Could not parse number: {}", e),
         };
 
+        // Set the word type.
         d_f_words[index].word_type = match u_prompt {
             0 => None,
             1 => Some(WordType::Noun),
@@ -365,14 +372,13 @@ mod processes {
             }
         };
 
+        // Set definition.
         println!("Alright, what does this word mean?");
         println!("Please, do not hit enter or enter a newline char in your response");
-
         let mut u_prompt = String::new();
         io::stdin()
             .read_line(&mut u_prompt)
             .expect("Could not read input from user");
-
         d_f_words[index].definition = Some(u_prompt);
 
         // save the new vec to the file
@@ -382,15 +388,19 @@ mod processes {
     }
 
 
+    // Add a word to the file.
     pub fn add_word() -> () {
+        // Make sure it's there.
         if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
             let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
+        // Read file to string.
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
 
+        // Deserialize string.
         let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             eprintln!("File is empty! Can't define any words...");
             process::exit(1);
@@ -398,6 +408,7 @@ mod processes {
             serde_json::from_str(&f_words).expect("Could not parse json from file")
         };
 
+        // Get the word to add to the list.
         let mut input = String::new();
         println!("What word would you like to add?");
         io::stdin().read_line(&mut input).expect("Could not read input");
@@ -410,11 +421,12 @@ mod processes {
             }
         }
 
+        // Add word.
         d_f_words.push(JPWord::simple_new(String::from(input.trim())));
         let word_index = d_f_words.len() - 1;
 
+        // Prompt user for the type.
         let mut u_prompt = String::new();
-
         println!("What type of word is it?");
         println!("Please enter the corresponding number, or 0 to skip");
         println!("1  -> Noun");
@@ -456,14 +468,15 @@ mod processes {
             }
         };
 
+        // Prompt for definition.
         println!("Alright, what does this word mean?");
         println!("Please, do not hit enter or enter a newline char in your response");
-
         let mut u_prompt = String::new();
         io::stdin()
             .read_line(&mut u_prompt)
             .expect("Could not read input from user");
 
+        // Set definition.
         d_f_words[word_index].definition = Some(u_prompt);
 
         // save the new vec to the file
@@ -472,15 +485,20 @@ mod processes {
             .expect("Could not write to file");
     }
 
+
+    // Remove a word from the list.
     pub fn remove_word() -> () {
+        // Check if file is there.
         if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
             let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
+        // Read file to string.
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
 
+        // Desirialzie the string.
         let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             eprintln!("File is empty! Can't define any words...");
             process::exit(1);
@@ -488,6 +506,7 @@ mod processes {
             serde_json::from_str(&f_words).expect("Could not parse json from file")
         };
 
+        // Prompt for word.
         let mut input = String::new();
         println!("What word would you like to remove?");
         io::stdin().read_line(&mut input).expect("Could not read input");
@@ -500,12 +519,12 @@ mod processes {
                 break;
             }
         }
-
         if !exist {
             eprintln!("Sorry, that word does not exist in the list");
             process::exit(0);
         }
 
+        // Remove word.
         d_f_words.retain(|x| x.word != input.trim());
         println!("Succesfully removed the word!");
 
@@ -515,15 +534,20 @@ mod processes {
             .expect("Could not write to file");
     }
 
+
+    // Test the users knowledge.
     pub fn test() -> () {
+        // Check if the file is there.
         if !path::Path::new(J_SAVE_FILE).exists() {
             let _dir = fs::create_dir("data");
             let _file = fs::File::create(J_SAVE_FILE)
                 .expect("Could not create file");
         }
 
+        // Read file to string.
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
 
+        // Desieralize string.
         let d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             eprintln!("File is empty! Can't define any words...");
             process::exit(1);
@@ -531,15 +555,17 @@ mod processes {
             serde_json::from_str(&f_words).expect("Could not parse json from file")
         };
 
+        // Get what I need to get randome word.
         let mut rng = rand::thread_rng();
         let r_num = rng.gen_range(0..=&d_f_words.len()-1);
 
+        // Test user!
         println!("Here is a test!");
         println!("What is {} ?", d_f_words[r_num].word);
 
+        // When user hits enter, or anything, show definition if it exsits.
         let mut _buffer = String::new();
         let _input = io::stdin().read_line(&mut _buffer);
-
         let def_option = &d_f_words[r_num]
             .definition;
         let def = match def_option {
@@ -548,17 +574,16 @@ mod processes {
         };
         println!("\nThe answer is:\n{}", def);
     }
-
 }
 
 
+// Everything needed to process everything.
 mod structures {
     use serde::{Serialize, Deserialize};
     use core::fmt;
     use std::cmp::Ordering;
 
 
-    
     #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
     pub enum WordType {
         Noun,
@@ -583,7 +608,6 @@ mod structures {
         pub definition: Option<String>,
     }
 
-
     impl JPWord {
         pub fn simple_new (w: String) -> JPWord {
             let _word = JPWord {
@@ -593,7 +617,6 @@ mod structures {
             };
             _word
         }
-
     }
 
     impl PartialOrd for JPWord {
@@ -627,8 +650,6 @@ mod structures {
     }
 
 
-
-
     // JapaneseWordParser is used to parser together japanese words. It's 
     // meant to be used by feeding it a stream of chars. Based on the input
     // of chars, it will either 1) add the char to the word, 2) do nothing
@@ -639,7 +660,6 @@ mod structures {
         pub changed: bool,
     }
 
-
     impl JapaneseWordParser {
         pub fn new() -> Self {
             JapaneseWordParser {
@@ -648,7 +668,6 @@ mod structures {
                 changed: false,
             }
         }
-
 
         // main parser. Takes in a char, returns nothing if it's the same type,
         // adds a char to the current word being processes 
