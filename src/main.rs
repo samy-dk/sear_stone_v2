@@ -1,4 +1,7 @@
 // todo:
+// - [ ] Update help() function to include all functionality.
+// - [ ] remove the println! that says what the args are. It was for 
+//          debugging, I don't need it now.
 //-----------------------------------------------------------------------------
 use std::{env, process};
 
@@ -193,7 +196,8 @@ mod processes {
         println!("Here is how to use it:");
         println!("1) If no flags are passed, all args are assumed to be text ");
         println!("files that contains Japanese words and will be proccessed.");
-        println!("These words will be added to a file called words_list.txt");
+        println!("These words will be added to a file called data/words_list.json");
+        println!("that is located in the directory where sear_stone is ran.");
         println!("");
         println!("2) -h or --help will print this menu.");
         println!("");
@@ -202,6 +206,16 @@ mod processes {
         println!("");
         println!("4) -pr or --print-random will print 10 random words from ");
         println!("words_list.txt");
+        println!("");
+        println!("5) -s or --set-meaning will guide you through adding a definition");
+        println!("and type to a word that is already added.");
+        println!("");
+        println!("6) -aw or --add-word will guide you through adding a word to the list.");
+        println!("");
+        println!("7) -rw or --remove-word will remove the word you choose.");
+        println!("");
+        println!("8) -t or --test will present a random word from the list. After");
+        println!("hitting enter, it will display the definition, if there is one. ");
         println!("");
     }
 
