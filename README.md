@@ -26,7 +26,7 @@ Lessons that you can use to verify the code works for yourself!
     cargo run -- Lesson-001.txt Lesson-004.txt
 
    to build and run the code! Running this code will create a list of words 
-in a file located at ./data/word_list.txt
+in a file located at ./data/word_list.json
 
    You can view the file there, or simply run
 
