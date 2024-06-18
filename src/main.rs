@@ -575,12 +575,33 @@ mod structures {
         Phrase
     }
 
+    enum TimesReviewed {
+        Zero,
+        One,
+        Two,
+        ThreePlus,
+    }
+
+    impl TimesReviewed {
+        pub fn update(mut self) -> () {
+            match self {
+                Self::Zero => self = Self::One,
+                Self::One  => self = Self::Two,
+                Self::Two  => self = Self::ThreePlus,
+                _ => (),
+            }
+        }
+    }
+
 
     #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
     pub struct JPWord {
         pub word: String,
         pub word_type: Option<WordType>,
         pub definition: Option<String>,
+        pub to_review: bool,
+        reviewed_correct: TimesReviewed,
+        //Last Reviewed: Chrono Time
     }
 
 
