@@ -668,6 +668,12 @@ mod structures {
         ThreePlus,
     }
 
+    impl Default for TimesReviewed {
+        fn default() -> Self {
+            TimesReviewed::Zero
+        }
+    }
+
 
 
     #[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
@@ -681,6 +687,12 @@ mod structures {
         ThreeMonths,
         SixMonths,
         OneYear,
+    }
+
+    impl Default for ReviewInterval {
+        fn default() -> Self {
+            ReviewInterval::ThreeHours
+        }
     }
 
     impl ReviewInterval {
@@ -719,10 +731,28 @@ mod structures {
         pub word: String,
         pub word_type: Option<WordType>,
         pub definition: Option<String>,
+        #[serde(default)]
         next_review: chrono::DateTime<Utc>,
+        #[serde(default)]
         review_iter: ReviewInterval,
+        #[serde(default)]
         pub to_review: bool,
+        #[serde(default)]
         reviewed_correct: TimesReviewed,
+    }
+
+    impl Default for JPWord {
+        fn default() -> Self {
+            JPWord {
+                word: String::from("default"),
+                word_type: None,
+                definition: None,
+                next_review: Utc::now(),
+                review_iter: ReviewInterval::ThreeHours,
+                to_review: true,
+                reviewed_correct: TimesReviewed::Zero,
+            }
+        }
     }
 
 
