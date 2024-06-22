@@ -564,7 +564,7 @@ mod processes {
         let mut testable_words: Vec<JPWord> = Vec::new();
 
         for word in &d_f_words {
-            if word.to_review {
+            if word.get_review() {
                 testable_words.push(word.clone());
             }
         }
@@ -641,14 +641,15 @@ mod processes {
         let mut review_counter = 0;
 
         for word in &mut d_f_words {
-            if word.to_review {
+            if *word.get_review() {
                 review_counter += 1;
                 continue;
             }
 
             if now - word.get_next_review() > chrono::TimeDelta::zero() {
                 review_counter += 1;
-                word.to_review = true;
+                word.set_review(true);
+                
             }
         }
 
@@ -762,7 +763,7 @@ mod structures {
         #[serde(default)]
         review_iter: ReviewInterval,
         #[serde(default)]
-        pub to_review: bool,
+        to_review: bool,
         #[serde(default)]
         reviewed_correct: TimesReviewed,
     }
@@ -817,7 +818,19 @@ mod structures {
                 self.to_review = false;
             }
         }
->>>>>>> dev
+
+        pub fn set_review(&mut self, b: bool) {
+            if b {
+                self.to_review = b;
+                self.reviewed_correct = TimesReviewed::Zero;
+            } else {
+                self.to_review = b;
+            }
+        }
+
+        pub fn get_review(&mut self) -> &bool {
+            &self.to_review
+        }
     }
 
     impl PartialOrd for JPWord {
