@@ -41,6 +41,8 @@ fn main() {
             "--remove-word" => data.flags = Some(ss_data::Flags::RemoveWord),
             "-t" => data.flags = Some(ss_data::Flags::Test),
             "--test" => data.flags = Some(ss_data::Flags::Test),
+            "-r" => data.flags = Some(ss_data::Flags::Review),
+            "--review" => data.flags = Some(ss_data::Flags::Review),
             _ => println!("Arg: {}", a),
         }
     }
@@ -54,6 +56,7 @@ fn main() {
         Some(ss_data::Flags::AddWord) => processes::add_word(),
         Some(ss_data::Flags::RemoveWord) => processes::remove_word(),
         Some(ss_data::Flags::Test) => processes::test(),
+        Some(ss_data::Flags::Review) => processes::review(),
         None => processes::process_files().expect("Processing Failed"),
     }
 }
@@ -69,6 +72,7 @@ mod ss_data {
         AddWord,
         RemoveWord,
         Test,
+        Review,
     }
 
 
@@ -93,6 +97,7 @@ mod ss_data {
 mod processes {
     use std::{collections, path, fs, env, process, io};
     use std:: error::Error;
+    use std::io::{prelude::*, stdin};
     use rand::Rng;
     use crate::structures::{JPWord, JapaneseWordParser, WordType};
 
@@ -171,7 +176,8 @@ mod processes {
         // Sort.
         let mut seen = collections::HashSet::new();
         d_f_words.retain(|word|
-                          seen.insert(word.clone()));
+                          seen.insert(word.word.clone()));
+
         d_f_words.sort();
 
         // save the new list of words to the file!
@@ -547,8 +553,7 @@ mod processes {
         // Read file to string.
         let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
 
-        // Desieralize string.
-        let d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+        let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
             eprintln!("File is empty! Can't define any words...");
             process::exit(1);
         } else {
@@ -556,23 +561,103 @@ mod processes {
         };
 
         // Get what I need to get randome word.
+        let mut testable_words: Vec<JPWord> = Vec::new();
+
+        for word in &d_f_words {
+            if word.to_review {
+                testable_words.push(word.clone());
+            }
+        }
+
         let mut rng = rand::thread_rng();
-        let r_num = rng.gen_range(0..=&d_f_words.len()-1);
+        let r_num = rng.gen_range(0..=&testable_words.len()-1);
 
         // Test user!
         println!("Here is a test!");
-        println!("What is {} ?", d_f_words[r_num].word);
+        println!("What is {} ?", testable_words[r_num].word);
 
-        // When user hits enter, or anything, show definition if it exsits.
-        let mut _buffer = String::new();
-        let _input = io::stdin().read_line(&mut _buffer);
-        let def_option = &d_f_words[r_num]
+        let mut buffer = String::new();
+        let _input = io::stdin().read_line(&mut buffer);
+
+        let def_option = &testable_words[r_num]
             .definition;
         let def = match def_option {
             Some(v) => String::from(v.trim()),
             None => String::from("No Definition"),
         };
         println!("\nThe answer is:\n{}", def);
+
+        // Get input from user on if they guessed correct.
+        println!("\n\nDid you guess correct!? (y/n)\n");
+        let mut buffer = String::new();
+        let _input = io::stdin()
+            .read_line(&mut buffer)
+            .expect("Could not read input");
+
+        let buffer = buffer.to_string();
+
+        match buffer.as_str().trim() {
+            "N" => println!("Keep trying!!!"),
+            "n" => println!("Keep trying!!!"),
+            "Y" => testable_words[r_num].correct(),
+            "y" => testable_words[r_num].correct(),
+            _ => println!("Keep trying."),
+        }
+
+        
+        // Add words back to original d_f_words
+        d_f_words.retain(|x| x.word != testable_words[r_num].word);
+        d_f_words.push(testable_words[r_num].clone());
+
+        d_f_words.sort();
+
+        let mut seen = collections::HashSet::new();
+        d_f_words.retain(|word|
+                          seen.insert(word.clone()));
+
+        let stringified = serde_json::to_string(&d_f_words).expect("Could not parse into JSON before writing");
+        fs::write(J_SAVE_FILE, &stringified)
+            .expect("Could not write to file");
+    }
+
+
+    pub fn review() {
+        if !path::Path::new(J_SAVE_FILE).exists() {
+            let _dir = fs::create_dir("data");
+            let _file = fs::File::create(J_SAVE_FILE)
+                .expect("Could not create file");
+        }
+
+        let f_words = fs::read_to_string(J_SAVE_FILE).expect("Could not read file");
+
+        let mut d_f_words: Vec<JPWord> = if f_words.trim().is_empty() {
+            eprintln!("File is empty! Can't define any words...");
+            process::exit(1);
+        } else {
+            serde_json::from_str(&f_words).expect("Could not parse json from file")
+        };
+
+        let now = chrono::Utc::now();
+        let mut review_counter = 0;
+
+        for word in &mut d_f_words {
+            if word.to_review {
+                review_counter += 1;
+                continue;
+            }
+
+            if now - word.get_next_review() > chrono::TimeDelta::zero() {
+                review_counter += 1;
+                word.to_review = true;
+            }
+        }
+
+        println!("You have {} words to review!!!", review_counter);
+        
+        // save the new vec to the file
+        let stringified = serde_json::to_string(&d_f_words).expect("Could not parse into JSON before writing");
+        fs::write(J_SAVE_FILE, &stringified)
+            .expect("Could not write to file");
     }
 }
 
@@ -582,6 +667,7 @@ mod structures {
     use serde::{Serialize, Deserialize};
     use core::fmt;
     use std::cmp::Ordering;
+    use chrono::{Duration, Utc};
 
 
     #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
@@ -600,12 +686,99 @@ mod structures {
         Phrase
     }
 
+    #[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
+    enum TimesReviewed {
+        Zero,
+        One,
+        Two,
+        ThreePlus,
+    }
+
+    impl Default for TimesReviewed {
+        fn default() -> Self {
+            TimesReviewed::Zero
+        }
+    }
+
+
+
+    #[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
+    enum ReviewInterval {
+        ThreeHours,
+        OneDay,
+        ThreeDays,
+        OneWeek,
+        TwoWeeks,
+        OneMonth,
+        ThreeMonths,
+        SixMonths,
+        OneYear,
+    }
+
+    impl Default for ReviewInterval {
+        fn default() -> Self {
+            ReviewInterval::ThreeHours
+        }
+    }
+
+    impl ReviewInterval {
+        fn duration(&self) -> chrono::Duration {
+            match self {
+                ReviewInterval::ThreeHours => Duration::hours(3),
+                ReviewInterval::OneDay => Duration::days(1),
+                ReviewInterval::ThreeDays=> Duration::days(3),
+                ReviewInterval::OneWeek=> Duration::weeks(1),
+                ReviewInterval::TwoWeeks=> Duration::weeks(2),
+                ReviewInterval::OneMonth=> Duration::weeks(4),
+                ReviewInterval::ThreeMonths=> Duration::weeks(12),
+                ReviewInterval::SixMonths=> Duration::weeks(24),
+                ReviewInterval::OneYear=> Duration::weeks(52),
+            }
+        }
+
+        fn next_dur(&mut self) -> ReviewInterval {
+            match self {
+                ReviewInterval::ThreeHours => ReviewInterval::OneDay,
+                ReviewInterval::OneDay=> ReviewInterval::ThreeDays,
+                ReviewInterval::ThreeDays=> ReviewInterval::OneWeek,
+                ReviewInterval::OneWeek=> ReviewInterval::TwoWeeks,
+                ReviewInterval::TwoWeeks=> ReviewInterval::OneMonth,
+                ReviewInterval::OneMonth=> ReviewInterval::ThreeMonths,
+                ReviewInterval::ThreeMonths=> ReviewInterval::SixMonths,
+                ReviewInterval::SixMonths=> ReviewInterval::OneYear,
+                ReviewInterval::OneYear=> ReviewInterval::OneYear,
+            }
+        }
+    }
+
 
     #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Hash, Clone)]
     pub struct JPWord {
         pub word: String,
         pub word_type: Option<WordType>,
         pub definition: Option<String>,
+        #[serde(default)]
+        next_review: chrono::DateTime<Utc>,
+        #[serde(default)]
+        review_iter: ReviewInterval,
+        #[serde(default)]
+        pub to_review: bool,
+        #[serde(default)]
+        reviewed_correct: TimesReviewed,
+    }
+
+    impl Default for JPWord {
+        fn default() -> Self {
+            JPWord {
+                word: String::from("default"),
+                word_type: None,
+                definition: None,
+                next_review: Utc::now(),
+                review_iter: ReviewInterval::ThreeHours,
+                to_review: true,
+                reviewed_correct: TimesReviewed::Zero,
+            }
+        }
     }
 
     impl JPWord {
@@ -614,9 +787,37 @@ mod structures {
                 word: w,
                 word_type: None,
                 definition: None,
+                next_review: Utc::now(),
+                review_iter: ReviewInterval::ThreeHours,
+                to_review: true,
+                reviewed_correct: TimesReviewed::Zero,
             };
             _word
         }
+
+        pub fn get_next_review(&self) -> chrono::DateTime<Utc> {
+            self.next_review
+        }
+
+        pub fn correct(&mut self) -> () {
+            if self.reviewed_correct != TimesReviewed::ThreePlus{
+                self.reviewed_correct = match &self.reviewed_correct {
+                    TimesReviewed::Zero => TimesReviewed::One,
+                    TimesReviewed::One=> TimesReviewed::Two,
+                    TimesReviewed::Two=> {
+                        self.next_review = Utc::now() + self.review_iter.duration();
+                        self.review_iter = self.review_iter.next_dur();
+                        TimesReviewed::ThreePlus
+                    },
+                    TimesReviewed::ThreePlus=> TimesReviewed::ThreePlus,
+                }
+            }
+
+            if self.reviewed_correct == TimesReviewed::ThreePlus {
+                self.to_review = false;
+            }
+        }
+>>>>>>> dev
     }
 
     impl PartialOrd for JPWord {
