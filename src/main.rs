@@ -641,7 +641,7 @@ mod processes {
         let mut review_counter = 0;
 
         for word in &mut d_f_words {
-            if *word.get_review() {
+            if word.get_review() {
                 review_counter += 1;
                 continue;
             }
@@ -828,8 +828,12 @@ mod structures {
             }
         }
 
-        pub fn get_review(&mut self) -> &bool {
-            &self.to_review
+        pub fn get_review(&self) -> bool {
+            let a = match self.to_review {
+                true => true,
+                false => false,
+            };
+            a
         }
     }
 
